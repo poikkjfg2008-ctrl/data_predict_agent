@@ -94,3 +94,7 @@ results = pipeline.run(
 predictions = pipeline.predict_new("new_data.csv")
 ```
 
+
+### 2026-03-09（当前会话增量）
+- 用户要求：优化 `agentic_prediction_pipeline.py`，重点处理边界情况；为 agent 项目构建合适的 agent loop；补齐使用文档和开发文档。
+- 已执行：增加稳健性校验与容错，新增 `AgentLoop`，新增 `USAGE.md` 与 `DEVELOPMENT.md`。
