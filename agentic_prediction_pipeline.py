@@ -221,6 +221,17 @@ class DataExplorer:
                 agent_hints={"error": str(e)}
             )
         
+        if self.raw_data is None or self.raw_data.empty:
+            return AgentMessage(
+                stage="data_exploration",
+                status=StageStatus.ERROR.value,
+                message="数据为空，无法继续建模",
+                data={"shape": list(self.raw_data.shape) if self.raw_data is not None else [0, 0]},
+                suggestions=["检查输入文件是否包含表头和数据行"],
+                next_actions=[{"action": "check_data", "description": "检查原始数据内容", "required": True}],
+                agent_hints={"error_type": "empty_dataset"}
+            )
+
         # 基础统计
         numeric_cols = self.raw_data.select_dtypes(include=[np.number]).columns.tolist()
         categorical_cols = self.raw_data.select_dtypes(include=['object', 'category']).columns.tolist()
@@ -294,10 +305,22 @@ class DataExplorer:
             }
         ]
         
+        status = StageStatus.SUCCESS.value if target_candidates else StageStatus.WARNING.value
+        message = f"成功加载数据: {self.raw_data.shape[0]} 行 × {self.raw_data.shape[1]} 列"
+        if not target_candidates:
+            suggestions.append("未找到可用数值目标列，请显式指定 target_col")
+            next_actions.insert(0, {
+                "action": "manual_target",
+                "description": "手动指定目标列",
+                "parameters": {"all_columns": self.raw_data.columns.tolist()},
+                "required": True
+            })
+            message += "，但未自动识别目标列"
+
         return AgentMessage(
             stage="data_exploration",
-            status=StageStatus.SUCCESS.value,
-            message=f"成功加载数据: {self.raw_data.shape[0]} 行 × {self.raw_data.shape[1]} 列",
+            status=status,
+            message=message,
             data=self.exploration_report,
             suggestions=suggestions,
             next_actions=next_actions,
@@ -345,6 +368,18 @@ class DataPreprocessor:
             target_cols: 目标列
             strategy: 处理策略 (auto/minimal/robust)
         """
+        missing_columns = [c for c in feature_cols + target_cols if c not in df.columns]
+        if missing_columns:
+            return AgentMessage(
+                stage="data_preprocessing",
+                status=StageStatus.ERROR.value,
+                message=f"输入列不存在: {missing_columns}",
+                data={"missing_columns": missing_columns},
+                suggestions=["检查feature_cols和target_cols是否正确"],
+                next_actions=[{"action": "fix_columns", "description": "修正列映射", "required": True}],
+                agent_hints={"error_type": "missing_columns"}
+            )
+
         self.feature_columns = feature_cols
         self.target_columns = target_cols
         
@@ -366,7 +401,9 @@ class DataPreprocessor:
                         method = "中位数" if strategy == "robust" else "均值"
                         preprocessing_log.append(f"列 '{col}': 使用{method}填充 {missing_count} 个缺失值")
                     else:
-                        processed_df[col] = processed_df[col].fillna(processed_df[col].mode()[0])
+                        mode_values = processed_df[col].mode(dropna=True)
+                        fill_value = mode_values.iloc[0] if not mode_values.empty else "UNKNOWN"
+                        processed_df[col] = processed_df[col].fillna(fill_value)
                         preprocessing_log.append(f"列 '{col}': 使用众数填充 {missing_count} 个缺失值")
         
         # 2. 编码分类变量
@@ -473,6 +510,27 @@ class FeatureEngineer:
             method: 特征选择方法 (correlation/mutual_info/rfe)
             k: 选择前k个特征，None表示自动决定
         """
+        if target_col not in df.columns:
+            return AgentMessage(
+                stage="feature_engineering",
+                status=StageStatus.ERROR.value,
+                message=f"目标列不存在: {target_col}",
+                data={},
+                suggestions=["检查上游目标列确认阶段"],
+                next_actions=[{"action": "confirm_target", "description": "重新确认目标列", "required": True}],
+                agent_hints={"error_type": "target_not_found"}
+            )
+        if not feature_cols:
+            return AgentMessage(
+                stage="feature_engineering",
+                status=StageStatus.ERROR.value,
+                message="特征列为空，无法继续",
+                data={},
+                suggestions=["至少选择1个特征列"],
+                next_actions=[{"action": "select_features", "description": "重新选择特征", "required": True}],
+                agent_hints={"error_type": "empty_features"}
+            )
+
         X = df[feature_cols].values
         y = df[target_col].values
         
@@ -500,7 +558,10 @@ class FeatureEngineer:
         sorted_features = sorted(importance_scores.items(), key=lambda x: x[1], reverse=True)
         
         # 自动决定k值
-        if k is None:
+        if k is not None:
+            k = max(1, min(int(k), len(feature_cols)))
+            self.selected_features = [f for f, _ in sorted_features[:k]]
+        elif k is None:
             # 如果相关性太低，保留至少一些特征
             valid_features = [(f, s) for f, s in sorted_features if s > 0]
             if not valid_features:
@@ -793,10 +854,23 @@ class ModelTrainer:
             strategy: 训练策略 (auto/zero_shot/few_shot/full)
             use_grid_search: 是否使用网格搜索调参
         """
-        from sklearn.base import clone
-        
+        if len(X_train) < 2:
+            return AgentMessage(
+                stage="model_training",
+                status=StageStatus.ERROR.value,
+                message="训练样本不足，至少需要2条样本",
+                data={"train_samples": int(len(X_train))},
+                suggestions=["收集更多数据或减少切分比例"],
+                next_actions=[{"action": "resplit", "description": "重新划分数据集", "required": True}],
+                agent_hints={"error_type": "insufficient_training_samples"}
+            )
+
         selector = ModelSelector()
-        model_config = selector.AVAILABLE_MODELS.get(model_name, selector.AVAILABLE_MODELS["ridge"])
+        base_config = selector.AVAILABLE_MODELS.get(model_name, selector.AVAILABLE_MODELS["ridge"])
+        model_config = {
+            "class": base_config["class"],
+            "params": dict(base_config["params"])
+        }
         
         # 根据策略调整参数
         if strategy in ["zero_shot", "few_shot"]:
@@ -811,7 +885,7 @@ class ModelTrainer:
             grid_search = GridSearchCV(
                 base_model, 
                 model_config["params"],
-                cv=min(cv_folds, len(X_train)),
+                cv=max(2, min(cv_folds, len(X_train))),
                 scoring='r2',
                 n_jobs=-1
             )
@@ -1102,6 +1176,35 @@ class AgenticPredictionPipeline:
             "training_result": None
         }
     
+
+    def _split_data(self, df: pd.DataFrame, selected: List[str], target_col: str) -> Optional[AgentMessage]:
+        """划分训练/验证/测试数据，失败时返回错误消息"""
+        X = df[selected].values
+        y = df[target_col].values
+
+        if len(X) < 10:
+            return AgentMessage(
+                stage="data_split",
+                status=StageStatus.ERROR.value,
+                message=f"样本数量不足，至少需要10条样本，当前{len(X)}条",
+                data={"n_samples": int(len(X))},
+                suggestions=["增加样本或减少任务复杂度"],
+                next_actions=[{"action": "collect_more_data", "description": "补充数据", "required": True}],
+                agent_hints={"error_type": "insufficient_samples"}
+            )
+
+        test_size = max(1, int(len(X) * 0.2))
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+        val_size = max(1, int(len(X_train) * 0.125))
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_size, random_state=42)
+
+        self.state["data_pairs"] = {
+            "X_train": X_train, "y_train": y_train,
+            "X_val": X_val, "y_val": y_val,
+            "X_test": X_test, "y_test": y_test
+        }
+        return None
+
     def run_full_pipeline(self,
                           file_path: str,
                           target_col: Optional[str] = None,
@@ -1122,16 +1225,38 @@ class AgenticPredictionPipeline:
         msg1 = self.explorer.explore(file_path, target_hint=target_col)
         print(msg1.to_json())
         results["stages"]["exploration"] = msg1.to_dict()
+        if msg1.status == StageStatus.ERROR.value:
+            results["summary"] = {"status": "failed", "failed_stage": "exploration"}
+            return results
         self.state["raw_data"] = self.explorer.raw_data
         
         # 自动确定目标列和特征列
         if target_col is None:
-            target_col = msg1.data["target_candidates"][0]
+            candidates = msg1.data.get("target_candidates") or []
+            if not candidates:
+                return {
+                    "stages": results["stages"],
+                    "summary": {
+                        "status": "failed",
+                        "failed_stage": "target_selection",
+                        "reason": "no_target_candidates"
+                    }
+                }
+            target_col = candidates[0]
             if isinstance(target_col, dict):
                 target_col = target_col["column"]
         
         if feature_cols is None:
             feature_cols = msg1.data["feature_candidates"]
+        if not feature_cols:
+            return {
+                "stages": results["stages"],
+                "summary": {
+                    "status": "failed",
+                    "failed_stage": "feature_selection",
+                    "reason": "no_feature_columns"
+                }
+            }
         
         self.state["target_col"] = target_col
         self.state["feature_cols"] = feature_cols
@@ -1147,6 +1272,9 @@ class AgenticPredictionPipeline:
         )
         print(msg2.to_json())
         results["stages"]["preprocessing"] = msg2.to_dict()
+        if msg2.status == StageStatus.ERROR.value:
+            results["summary"] = {"status": "failed", "failed_stage": "preprocessing"}
+            return results
         self.state["processed_data"] = self.preprocessor.processed_data
         
         # 阶段3: 特征工程
@@ -1160,6 +1288,9 @@ class AgenticPredictionPipeline:
         )
         print(msg3.to_json())
         results["stages"]["feature_engineering"] = msg3.to_dict()
+        if msg3.status == StageStatus.ERROR.value:
+            results["summary"] = {"status": "failed", "failed_stage": "feature_engineering"}
+            return results
         self.state["selected_features"] = self.feature_engineer.selected_features
         
         # 数据划分
@@ -1167,17 +1298,18 @@ class AgenticPredictionPipeline:
         df = self.state["processed_data"]
         selected = self.state["selected_features"]
         
-        X = df[selected].values
-        y = df[target_col].values
-        
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.125, random_state=42)
-        
-        self.state["data_pairs"] = {
-            "X_train": X_train, "y_train": y_train,
-            "X_val": X_val, "y_val": y_val,
-            "X_test": X_test, "y_test": y_test
-        }
+        split_error = self._split_data(df, selected, target_col)
+        if split_error is not None:
+            results["stages"]["data_split"] = split_error.to_dict()
+            results["summary"] = {"status": "failed", "failed_stage": "data_split"}
+            return results
+
+        X_train = self.state["data_pairs"]["X_train"]
+        X_val = self.state["data_pairs"]["X_val"]
+        X_test = self.state["data_pairs"]["X_test"]
+        y_train = self.state["data_pairs"]["y_train"]
+        y_val = self.state["data_pairs"]["y_val"]
+        y_test = self.state["data_pairs"]["y_test"]
         
         # 阶段4: 模型选择
         print("\n" + "=" * 60)
@@ -1265,13 +1397,30 @@ class AgenticPredictionPipeline:
         # 应用相同的预处理
         for col, encoder in self.preprocessor.encoders.items():
             if col in new_df.columns:
-                new_df[col] = encoder.transform(new_df[col].astype(str))
+                values = new_df[col].astype(str)
+                unknown_mask = ~values.isin(encoder.classes_)
+                if unknown_mask.any():
+                    fallback = encoder.classes_[0]
+                    values = values.where(~unknown_mask, fallback)
+                new_df[col] = encoder.transform(values)
         
         # 选择特征并缩放
         selected = self.state["selected_features"]
         original_features = self.state["feature_cols"]
         
         # 使用scaler（需要全部原始特征）
+        missing_new_features = [c for c in original_features if c not in new_df.columns]
+        if missing_new_features:
+            return AgentMessage(
+                stage="prediction",
+                status=StageStatus.ERROR.value,
+                message=f"新数据缺少特征列: {missing_new_features}",
+                data={"missing_features": missing_new_features},
+                suggestions=["补齐缺失特征列后重试"],
+                next_actions=[{"action": "fix_new_data", "description": "修正预测输入", "required": True}],
+                agent_hints={"error_type": "missing_prediction_features"}
+            )
+
         X_new_all = new_df[original_features].values
         X_new_all = self.preprocessor.scaler.transform(X_new_all)
         X_new_df = pd.DataFrame(X_new_all, columns=original_features)

@@ -15,3 +15,7 @@ _(What do they care about? What projects are they working on? What annoys them? 
 ---
 
 The more you know, the better you can help. But remember — you're learning about a person, not building a dossier. Respect the difference.
+
+## Preferences (2026-03-09)
+- 偏好中文交流。
+- 当前关注：agent项目的工程化优化（边界处理、agent loop、使用与开发文档）。
