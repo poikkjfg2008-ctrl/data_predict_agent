@@ -94,3 +94,7 @@ results = pipeline.run(
 predictions = pipeline.predict_new("new_data.csv")
 ```
 
+
+### 2026-03-09（本次会话）
+- 用户要求：优化 `agentic_prediction_pipeline.py`，重点分析并增强边界情况处理；为项目构建可用的 agent loop；补充使用文档和开发文档。
+- 已完成：新增边界保护（空数据、缺失列、空特征、样本不足、预测特征缺失、未知类别回退）；新增 `agent_loop.py`；新增 `USAGE.md` 和 `DEVELOPMENT.md`。
