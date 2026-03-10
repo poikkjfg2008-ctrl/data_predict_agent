@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    volumes:
+      - ./ollama-data:/root/.ollama
+    # 如果需要 GPU，请按宿主环境补充 runtime/device 配置
+
+  # 可选：一次性初始化模型（手工执行更可控）
+  # init-model:
+  #   image: curlimages/curl:8.6.0
+  #   depends_on:
+  #     - ollama
+  #   entrypoint: ["/bin/sh", "-c"]
+  #   command: |
+  #     sleep 8
+  #     curl -s http://ollama:11434/api/pull -d '{"name":"qwen2.5:7b"}'
