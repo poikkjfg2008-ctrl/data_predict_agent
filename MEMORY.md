@@ -100,3 +100,10 @@ predictions = pipeline.predict_new("new_data.csv")
 - 用户新增任务：构建适配该项目的 agent loop。
 - 用户新增任务：补齐使用文档和开发文档。
 - 已执行：增强输入校验、统一错误消息、CV 折数安全处理、推理未知类别/缺失列保护、流程失败短路，新增 `AgentLoop`、`USAGE.md`、`DEVELOPMENT.md`。
+
+## 2026-03-10
+
+- 用户要求新增一个“阶段消息→部署上下文”的技能化方案，用于把 `agentic_prediction_pipeline.py` 的各阶段 AgentMessage 组装后接入已部署智能体。
+- 已新增技能目录：`skills/agent-stage-context-integrator/`。
+- 已新增技能文档：`skills/agent-stage-context-integrator/SKILL.md`，定义了触发语义、输入输出约定、执行步骤与部署集成策略。
+- 已新增脚本：`skills/agent-stage-context-integrator/scripts/assemble_stage_context.py`，可把 `pipeline_results.json` 输出为 `context_bundle.json` 与 `prompt_context.md`。
