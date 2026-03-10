@@ -100,3 +100,12 @@ predictions = pipeline.predict_new("new_data.csv")
 - 用户新增任务：构建适配该项目的 agent loop。
 - 用户新增任务：补齐使用文档和开发文档。
 - 已执行：增强输入校验、统一错误消息、CV 折数安全处理、推理未知类别/缺失列保护、流程失败短路，新增 `AgentLoop`、`USAGE.md`、`DEVELOPMENT.md`。
+
+## 2026-03-10
+- 新需求：在 `/workspace/data_predict_agent` 中补充“Ollama 接入 agent”的落地资产。
+- 交付内容：
+  - `skills/ollama-agent-integration/SKILL.md`（按 skill-creator 风格编写，含触发条件、流程、契约、排障、输出要求）
+  - `configs/ollama/.env.example`（环境变量模板）
+  - `configs/ollama/ollama-agent.config.yaml`（agent 配置模板）
+  - `configs/ollama/healthcheck.sh`（连通性检查脚本）
+- 用户本轮目标：先把接入骨架与配置模板准备好，后续自行填充真实信息。
