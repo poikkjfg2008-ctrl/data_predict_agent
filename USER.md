@@ -19,3 +19,6 @@ The more you know, the better you can help. But remember — you're learning abo
 ## Session Notes (2026-03-09)
 - Prefers practical project optimization on agentic ML pipeline.
 - Asked specifically for edge-case hardening, agent loop design, and complete docs.
+## Session Notes (2026-03-10)
+- 用户希望将项目各阶段 AgentMessage 以 skill 方式组装成可注入已部署智能体的 context。
+- 偏好输出可直接落地：`SKILL.md` + `scripts/xxx.py`。

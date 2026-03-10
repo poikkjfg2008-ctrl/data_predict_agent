@@ -100,3 +100,7 @@ predictions = pipeline.predict_new("new_data.csv")
 - 用户新增任务：构建适配该项目的 agent loop。
 - 用户新增任务：补齐使用文档和开发文档。
 - 已执行：增强输入校验、统一错误消息、CV 折数安全处理、推理未知类别/缺失列保护、流程失败短路，新增 `AgentLoop`、`USAGE.md`、`DEVELOPMENT.md`。
+
+## 2026-03-10
+- 用户提出新需求：把 data_predict_agent 的各阶段 agent 消息封装为 skill，用于向其已部署智能体注入 context。
+- 交付方向：新增 skill 目录，提供可执行脚本将 `pipeline_results.json` 组装为标准化 `agent_context.json`。
