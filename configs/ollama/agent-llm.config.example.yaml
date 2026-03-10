@@ -1,0 +1,30 @@
+llm:
+  provider: ollama # ollama | openai_compatible
+  request:
+    timeout_seconds: 120
+    retries: 2
+    retry_backoff_seconds: 1.5
+
+  providers:
+    ollama:
+      base_url: "http://127.0.0.1:11434"
+      chat_endpoint: "/api/chat"
+      model: "qwen2.5:7b"
+      stream: false
+      options:
+        temperature: 0.2
+        top_p: 0.9
+        max_tokens: 1024
+
+    openai_compatible:
+      base_url: "http://127.0.0.1:11434/v1"
+      api_key: "${LLM_API_KEY}"
+      model: "qwen2.5:7b"
+      options:
+        temperature: 0.2
+        top_p: 0.9
+        max_tokens: 1024
+
+  fallback:
+    enabled: false
+    provider: openai_compatible
