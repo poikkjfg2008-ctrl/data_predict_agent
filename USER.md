@@ -15,3 +15,7 @@ _(What do they care about? What projects are they working on? What annoys them? 
 ---
 
 The more you know, the better you can help. But remember — you're learning about a person, not building a dossier. Respect the difference.
+
+## Session Notes (2026-03-09)
+- Prefers practical project optimization on agentic ML pipeline.
+- Asked specifically for edge-case hardening, agent loop design, and complete docs.
