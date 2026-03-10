@@ -1,0 +1,29 @@
+ollama:
+  base_url: ${OLLAMA_BASE_URL}
+  timeout_seconds: ${OLLAMA_TIMEOUT_SECONDS}
+  max_retries: ${OLLAMA_MAX_RETRIES}
+  retry_backoff_seconds: ${OLLAMA_RETRY_BACKOFF_SECONDS}
+
+  defaults:
+    model: ${OLLAMA_EXECUTOR_MODEL}
+    temperature: ${OLLAMA_TEMPERATURE}
+    top_p: ${OLLAMA_TOP_P}
+    num_ctx: ${OLLAMA_NUM_CTX}
+    num_predict: ${OLLAMA_NUM_PREDICT}
+
+  models:
+    planner:
+      name: ${OLLAMA_PLANNER_MODEL}
+      temperature: 0.1
+      top_p: 0.8
+      num_ctx: 8192
+    executor:
+      name: ${OLLAMA_EXECUTOR_MODEL}
+      temperature: 0.3
+      top_p: 0.9
+      num_ctx: 8192
+    fallback:
+      name: ${OLLAMA_FALLBACK_MODEL}
+      temperature: 0.2
+      top_p: 0.9
+      num_ctx: 4096

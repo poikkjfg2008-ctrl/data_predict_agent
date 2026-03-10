@@ -1,0 +1,20 @@
+routing:
+  default_chain:
+    - planner
+    - executor
+
+  task_to_model:
+    planning: planner
+    reasoning: executor
+    coding: executor
+    extraction: executor
+    fallback: fallback
+
+  failure_policy:
+    max_failures_before_fallback: 2
+    fallback_model: fallback
+    retry_same_model: 1
+
+  limits:
+    max_context_tokens: ${OLLAMA_NUM_CTX}
+    max_output_tokens: ${OLLAMA_NUM_PREDICT}
