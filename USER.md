@@ -19,3 +19,7 @@ The more you know, the better you can help. But remember — you're learning abo
 ## Session Notes (2026-03-09)
 - Prefers practical project optimization on agentic ML pipeline.
 - Asked specifically for edge-case hardening, agent loop design, and complete docs.
+
+## Session Notes (2026-03-10)
+- 希望把 Ollama 推理接口整合进 agent 项目。
+- 偏好“可复制即用”的交付：`SKILL.md` + 配置模板（env/yaml）。

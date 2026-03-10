@@ -1,0 +1,34 @@
+llm:
+  provider: ollama
+
+  providers:
+    ollama:
+      base_url: "${OLLAMA_BASE_URL:http://127.0.0.1:11434/v1}"
+      api_key: "${OLLAMA_API_KEY:ollama}"
+      model: "${OLLAMA_MODEL:qwen2.5:7b}"
+      request_timeout_seconds: ${OLLAMA_TIMEOUT_SECONDS:120}
+      chat:
+        temperature: ${OLLAMA_TEMPERATURE:0.2}
+        top_p: ${OLLAMA_TOP_P:0.9}
+        max_tokens: ${OLLAMA_MAX_TOKENS:1024}
+        stream: false
+
+    openai:
+      base_url: "${OPENAI_BASE_URL:https://api.openai.com/v1}"
+      api_key: "${OPENAI_API_KEY:replace-me}"
+      model: "${OPENAI_MODEL:gpt-4o-mini}"
+      request_timeout_seconds: 90
+      chat:
+        temperature: 0.2
+        top_p: 0.9
+        max_tokens: 1024
+        stream: false
+
+routing:
+  enable_fallback: ${ENABLE_FALLBACK:true}
+  fallback_provider: "${FALLBACK_PROVIDER:openai}"
+
+observability:
+  log_level: "${LLM_LOG_LEVEL:INFO}"
+  include_token_usage: ${LLM_ENABLE_TOKEN_USAGE:true}
+  include_latency_ms: true
