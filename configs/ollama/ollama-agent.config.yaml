@@ -1,0 +1,40 @@
+agent:
+  llm_provider: ollama
+  fallback_provider: openai # optional: rollback switch
+
+  routing:
+    planner_model: ${OLLAMA_PLANNER_MODEL}
+    executor_model: ${OLLAMA_CHAT_MODEL}
+
+ollama:
+  base_url: ${OLLAMA_BASE_URL}
+  chat:
+    model: ${OLLAMA_CHAT_MODEL}
+    timeout_seconds: ${OLLAMA_TIMEOUT_SECONDS}
+    stream: false
+    options:
+      temperature: ${OLLAMA_TEMPERATURE}
+      top_p: ${OLLAMA_TOP_P}
+      num_ctx: ${OLLAMA_NUM_CTX}
+      num_predict: ${OLLAMA_MAX_TOKENS}
+
+  auth:
+    enabled: false
+    header_name: Authorization
+    header_value: "Bearer ${OLLAMA_API_KEY}"
+
+healthcheck:
+  enabled: true
+  checks:
+    - name: list_models
+      method: GET
+      url: ${OLLAMA_BASE_URL}/api/tags
+    - name: minimal_chat
+      method: POST
+      url: ${OLLAMA_BASE_URL}/api/chat
+      json:
+        model: ${OLLAMA_CHAT_MODEL}
+        stream: false
+        messages:
+          - role: user
+            content: "Reply with: OK"
